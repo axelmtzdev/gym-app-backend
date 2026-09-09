@@ -6,6 +6,7 @@ import {
     JoinColumn,
     ManyToOne,
     PrimaryGeneratedColumn,
+    type Relation,
 } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 
@@ -20,7 +21,7 @@ export class RefreshToken {
         onDelete: 'CASCADE',
     })
     @JoinColumn({ name: 'usuario_id' })
-    usuario: Usuario;
+    usuario: Relation<Usuario>;
 
     // Se guarda el hash del refresh token, nunca el valor plano —
     // simétrico a contrasena_hash en Usuario.

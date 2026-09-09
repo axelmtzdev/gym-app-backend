@@ -7,6 +7,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
   Unique,
 } from 'typeorm';
 import { Sesion } from './sesion.entity.js';
@@ -28,11 +29,11 @@ export class Serie {
 
   @ManyToOne(() => Sesion, (sesion) => sesion.series, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'sesion_id' })
-  sesion: Sesion;
+  sesion: Relation<Sesion>;
 
   @ManyToOne(() => Ejercicio, (ejercicio) => ejercicio.series)
   @JoinColumn({ name: 'ejercicio_id' })
-  ejercicio: Ejercicio;
+  ejercicio: Relation<Ejercicio>;
 
   @Column({ name: 'numero_serie', type: 'smallint' })
   numeroSerie: number;

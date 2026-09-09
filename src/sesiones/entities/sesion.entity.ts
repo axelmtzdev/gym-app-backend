@@ -8,6 +8,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 import { Rutina } from '../../rutinas/entities/rutina.entity.js';
@@ -30,11 +31,11 @@ export class Sesion {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'usuario_id' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @ManyToOne(() => Rutina, (rutina) => rutina.sesiones, { nullable: true })
   @JoinColumn({ name: 'rutina_id' })
-  rutina: Rutina | null;
+  rutina: Relation<Rutina> | null;
 
   @CreateDateColumn({ name: 'iniciada_en', type: 'timestamptz' })
   iniciadaEn: Date;
@@ -51,5 +52,5 @@ export class Sesion {
   estado: EstadoSesion;
 
   @OneToMany(() => Serie, (serie) => serie.sesion)
-  series: Serie[];
+  series: Relation<Serie>[];
 }

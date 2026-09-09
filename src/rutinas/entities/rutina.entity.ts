@@ -6,6 +6,7 @@ import {
   ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
+  type Relation,
 } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 import { RutinaEjercicio } from './rutina-ejercicio.entity.js';
@@ -20,7 +21,7 @@ export class Rutina {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'usuario_id' })
-  usuario: Usuario;
+  usuario: Relation<Usuario>;
 
   @Column({ type: 'varchar', length: 100 })
   nombre: string;
@@ -35,8 +36,8 @@ export class Rutina {
   creadoEn: Date;
 
   @OneToMany(() => RutinaEjercicio, (re) => re.rutina)
-  ejercicios: RutinaEjercicio[];
+  ejercicios: Relation<RutinaEjercicio>[];
 
   @OneToMany(() => Sesion, (sesion) => sesion.rutina)
-  sesiones: Sesion[];
+  sesiones: Relation<Sesion>[];
 }

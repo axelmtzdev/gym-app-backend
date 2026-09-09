@@ -4,6 +4,7 @@ import {
     Entity,
     OneToMany,
     PrimaryGeneratedColumn,
+    type Relation,
 } from 'typeorm';
 import { Rutina } from '../../rutinas/entities/rutina.entity.js';
 import { Sesion } from '../../sesiones/entities/sesion.entity.js';
@@ -28,11 +29,11 @@ export class Usuario {
     creadoEn: Date;
 
     @OneToMany(() => Rutina, (rutina) => rutina.usuario)
-    rutinas: Rutina[];
+    rutinas: Relation<Rutina>[];
 
     @OneToMany(() => Sesion, (sesion) => sesion.usuario)
-    sesiones: Sesion[];
+    sesiones: Relation<Sesion>[];
 
     @OneToMany(() => RefreshToken, (token) => token.usuario)
-    refreshTokens: RefreshToken[];
+    refreshTokens: Relation<RefreshToken>[];
 }

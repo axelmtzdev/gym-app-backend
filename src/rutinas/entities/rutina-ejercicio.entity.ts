@@ -4,6 +4,7 @@ import {
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
+  type Relation,
   Unique,
 } from 'typeorm';
 import { Rutina } from './rutina.entity.js';
@@ -19,11 +20,11 @@ export class RutinaEjercicio {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'rutina_id' })
-  rutina: Rutina;
+  rutina: Relation<Rutina>;
 
   @ManyToOne(() => Ejercicio, (ejercicio) => ejercicio.rutinaEjercicios)
   @JoinColumn({ name: 'ejercicio_id' })
-  ejercicio: Ejercicio;
+  ejercicio: Relation<Ejercicio>;
 
   @Column({ type: 'smallint' })
   orden: number;
