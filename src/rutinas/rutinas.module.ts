@@ -3,11 +3,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Rutina } from './entities/rutina.entity.js';
 import { RutinaEjercicio } from './entities/rutina-ejercicio.entity.js';
 import { Sesion } from '../sesiones/entities/sesion.entity.js';
+import { AuthModule } from '../auth/auth.module.js';
 import { RutinasService } from './rutinas.service.js';
 import { RutinasController } from './rutinas.controller.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Rutina, RutinaEjercicio, Sesion])],
+  imports: [
+    TypeOrmModule.forFeature([Rutina, RutinaEjercicio, Sesion]),
+    AuthModule,
+  ],
   controllers: [RutinasController],
   providers: [RutinasService],
 })

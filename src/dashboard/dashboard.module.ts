@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Sesion } from '../sesiones/entities/sesion.entity.js';
 import { Serie } from '../sesiones/entities/serie.entity.js';
+import { AuthModule } from '../auth/auth.module.js';
 import { DashboardService } from './dashboard.service.js';
 import { DashboardController } from './dashboard.controller.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Sesion, Serie])],
+  imports: [TypeOrmModule.forFeature([Sesion, Serie]), AuthModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })
