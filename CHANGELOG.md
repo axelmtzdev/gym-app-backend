@@ -54,6 +54,11 @@ Backend de una app de gimnasio/entrenamiento construido con **NestJS** (v12) sob
 
 ## Historial de commits
 
+### Fix: exponer `id` de `rutina_ejercicios` en `GET /rutinas/:id` (2026-09-10)
+**Problema:** al implementar el consumo de `PATCH/DELETE /rutinas/:id/ejercicios/:id` en el front, se detectó que `GET /rutinas/:id` nunca devolvía el `id` propio del renglón de `rutina_ejercicios` en cada objeto de `ejercicios[]` (solo `ejercicio_id`, que es el id del catálogo) — sin ese dato no había forma de armar la URL de esas dos rutas para editar/quitar un ejercicio ya guardado en una rutina.
+**Fix:** agregar `id: re.id` al mapeo de `ejercicios[]` en `RutinasService.obtener()`.
+**Archivos:** `rutinas/rutinas.service.ts`.
+
 ### Grupos musculares editables en `PATCH /rutinas/:id` (2026-09-10)
 **Qué cambió:** `ActualizarRutinaDto` gana el campo opcional `grupos` (misma validación de 1-3 elementos que `CrearRutinaDto`). Si viene en el body, `RutinasService.actualizar()` reemplaza por completo los renglones de `rutina_grupos` de esa rutina dentro de una transacción; si no viene, esa tabla no se toca. La respuesta ahora siempre incluye `grupos: string[]`.
 **Por qué:** antes no había forma de corregir los grupos de una rutina mal etiquetada sin recrearla entera.

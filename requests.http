@@ -100,7 +100,8 @@ Content-Type: application/json
 GET {{baseUrl}}/rutinas
 Authorization: Bearer {{token}}
 
-### 8. Detalle de la rutina -> debe incluir "grupos": [...]
+### 8. Detalle de la rutina -> debe incluir "grupos": [...] y cada ejercicio del plan
+### debe traer su propio "id" (el de rutina_ejercicios, usado en el PATCH/DELETE de abajo)
 GET {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}
 Authorization: Bearer {{token}}
 

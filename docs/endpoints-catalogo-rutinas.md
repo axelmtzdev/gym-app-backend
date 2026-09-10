@@ -163,10 +163,11 @@ Detalle de una rutina propia. Incluye `grupos: string[]` además de lo que ya de
   "entrenamientos_esta_semana": 2,
   "grupos": ["Pecho", "Hombro", "Brazo"],
   "ejercicios": [
-    { "ejercicio_id": 1, "nombre": "Press banca", "orden": 1, "series_objetivo": 4, "reps_objetivo": 8 }
+    { "id": 10, "ejercicio_id": 1, "nombre": "Press banca", "orden": 1, "series_objetivo": 4, "reps_objetivo": 8 }
   ]
 }
 ```
+`id` es el id del renglón de `rutina_ejercicios` — es el que va en `:rutinaEjercicioId` al llamar `PATCH`/`DELETE /rutinas/:id/ejercicios/:id`.
 
 **Errores**
 - `404` — la rutina no existe o no pertenece al usuario autenticado.

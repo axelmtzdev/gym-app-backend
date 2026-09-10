@@ -143,6 +143,7 @@ export class RutinasService {
       entrenamientos_esta_semana: entrenamientosEstaSemana,
       grupos: rutina.grupos.map((g) => g.grupoMuscular),
       ejercicios: ejerciciosOrdenados.map((re) => ({
+        id: re.id,
         ejercicio_id: re.ejercicio.id,
         nombre: re.ejercicio.nombre,
         orden: re.orden,
