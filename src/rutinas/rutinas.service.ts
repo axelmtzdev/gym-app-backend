@@ -73,13 +73,42 @@ export class RutinasService {
   }
 
   async actualizar(id: string, dto: ActualizarRutinaDto, usuarioId: string) {
-    const rutina = await this.obtenerPropia(id, usuarioId);
+    return this.dataSource.transaction(async (manager) => {
+      const rutina = await manager.findOne(Rutina, {
+        where: { id, usuario: { id: usuarioId } },
+      });
+      if (!rutina) {
+        throw new NotFoundException('Rutina no encontrada');
+      }
 
-    if (dto.nombre !== undefined) rutina.nombre = dto.nombre;
-    if (dto.descripcion !== undefined) rutina.descripcion = dto.descripcion;
-    if (dto.activa !== undefined) rutina.activa = dto.activa;
+      if (dto.nombre !== undefined) rutina.nombre = dto.nombre;
+      if (dto.descripcion !== undefined) rutina.descripcion = dto.descripcion;
+      if (dto.activa !== undefined) rutina.activa = dto.activa;
+      await manager.save(rutina);
 
-    return this.rutinas.save(rutina);
+      if (dto.grupos) {
+        await manager.delete(RutinaGrupo, { rutinaId: id });
+        await manager.save(
+          dto.grupos.map((grupoMuscular) =>
+            manager.create(RutinaGrupo, { rutinaId: id, grupoMuscular }),
+          ),
+        );
+      }
+
+      const grupos =
+        dto.grupos ??
+        (
+          await manager.find(RutinaGrupo, { where: { rutinaId: id } })
+        ).map((g) => g.grupoMuscular);
+
+      return {
+        id: rutina.id,
+        nombre: rutina.nombre,
+        descripcion: rutina.descripcion,
+        activa: rutina.activa,
+        grupos,
+      };
+    });
   }
 
   async obtener(id: string, usuarioId: string) {

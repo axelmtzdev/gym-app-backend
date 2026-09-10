@@ -1,0 +1,167 @@
+### Requiere la extensión "REST Client" en VS Code (o adapta a curl/Postman).
+### Cambia @baseUrl si pruebas contra Render en vez de local.
+### Flujo: 1) login para obtener el token, 2) copiar el access_token en @token,
+### 3) correr las pruebas de /ejercicios y /rutinas en orden (algunas usan el id
+### devuelto por la request anterior — REST Client las guarda automáticamente).
+
+@baseUrl = http://localhost:3000
+@token = PEGA_AQUI_EL_ACCESS_TOKEN
+
+### 0. Login (usa un usuario que ya exista; o corre /auth/registro primero)
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "axel.martinez@bi-sim.com.mx",
+  "contrasena": "cambia-esto"
+}
+
+###
+@token = {{login.response.body.access_token}}
+
+### ============ EJERCICIOS ============
+
+### 1. Listar catálogo completo (activo=true por default)
+GET {{baseUrl}}/ejercicios
+Authorization: Bearer {{token}}
+
+### 2. Listar filtrando por grupos musculares
+GET {{baseUrl}}/ejercicios?grupos=Pecho,Hombro
+Authorization: Bearer {{token}}
+
+### 3. Crear un ejercicio nuevo
+# @name crearEjercicio
+POST {{baseUrl}}/ejercicios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Press banca inclinado",
+  "grupo_muscular": "Pecho",
+  "equipo": "Barra"
+}
+
+### 3b. Repetir la misma request de arriba -> debe dar 409 (nombre duplicado)
+
+### 4. Actualizar el ejercicio recién creado
+PATCH {{baseUrl}}/ejercicios/{{crearEjercicio.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "equipo": "Mancuernas"
+}
+
+### 5. Desactivar el ejercicio (no debe aparecer más en GET /ejercicios)
+PATCH {{baseUrl}}/ejercicios/{{crearEjercicio.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "activo": false
+}
+
+### 5b. Validación: grupo_muscular fuera de la lista fija -> debe dar 400
+POST {{baseUrl}}/ejercicios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Ejercicio inválido",
+  "grupo_muscular": "Abdomen"
+}
+
+### ============ RUTINAS ============
+
+### 6. Crear una rutina con 1-3 grupos musculares
+# @name crearRutina
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Empuje",
+  "descripcion": "Pecho, hombro y tríceps",
+  "grupos": ["Pecho", "Hombro", "Brazo"]
+}
+
+### 6b. Validación: más de 3 grupos -> debe dar 400
+POST {{baseUrl}}/rutinas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Rutina inválida",
+  "grupos": ["Pecho", "Hombro", "Brazo", "Core"]
+}
+
+### 7. Listar rutinas -> cada una debe incluir "grupos": [...]
+GET {{baseUrl}}/rutinas
+Authorization: Bearer {{token}}
+
+### 8. Detalle de la rutina -> debe incluir "grupos": [...]
+GET {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}
+Authorization: Bearer {{token}}
+
+### 9. Actualizar la rutina (sin "grupos" en el body -> no toca rutina_grupos)
+PATCH {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nombre": "Empuje (actualizado)",
+  "activa": true
+}
+
+### 9b. Actualizar reemplazando los grupos musculares (respuesta debe traer los nuevos)
+PATCH {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "grupos": ["Espalda", "Core"]
+}
+
+### 9c. Validación: más de 3 grupos -> debe dar 400
+PATCH {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "grupos": ["Pecho", "Hombro", "Brazo", "Core"]
+}
+
+### 10. Agregar un ejercicio al plan de la rutina
+### Usa el id de un ejercicio existente y activo en tu catálogo (ajusta ejercicio_id)
+# @name agregarEjercicio
+POST {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}/ejercicios
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ejercicio_id": 1,
+  "orden": 1,
+  "series_objetivo": 4,
+  "reps_objetivo": 8
+}
+
+### 10b. Repetir la misma request de arriba -> debe dar 409 (ejercicio duplicado en la rutina)
+
+### 11. Actualizar ese renglón de la rutina
+PATCH {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}/ejercicios/{{agregarEjercicio.response.body.id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "series_objetivo": 5
+}
+
+### 12. Quitar el ejercicio del plan (204, sin body)
+DELETE {{baseUrl}}/rutinas/{{crearRutina.response.body.id}}/ejercicios/{{agregarEjercicio.response.body.id}}
+Authorization: Bearer {{token}}
+
+### 13. Dueño: intentar tocar una rutina de otro usuario -> debe dar 404
+### (usa un id de rutina real que sepas que NO es de este usuario)
+GET {{baseUrl}}/rutinas/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}

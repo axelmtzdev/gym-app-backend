@@ -54,6 +54,12 @@ Backend de una app de gimnasio/entrenamiento construido con **NestJS** (v12) sob
 
 ## Historial de commits
 
+### Grupos musculares editables en `PATCH /rutinas/:id` (2026-09-10)
+**Qué cambió:** `ActualizarRutinaDto` gana el campo opcional `grupos` (misma validación de 1-3 elementos que `CrearRutinaDto`). Si viene en el body, `RutinasService.actualizar()` reemplaza por completo los renglones de `rutina_grupos` de esa rutina dentro de una transacción; si no viene, esa tabla no se toca. La respuesta ahora siempre incluye `grupos: string[]`.
+**Por qué:** antes no había forma de corregir los grupos de una rutina mal etiquetada sin recrearla entera.
+**Decisión clave:** el reemplazo de grupos nunca toca `rutina_ejercicios` — si se quita un grupo que ya tenía un ejercicio asociado en el plan, ese ejercicio se queda igual, sin limpieza automática ni cascada.
+**Archivos:** `rutinas/dto/actualizar-rutina.dto.ts`, `rutinas/rutinas.service.ts`.
+
 ### Catálogo de ejercicios y gestión de rutinas (2026-09-10)
 **Qué cambió:** capa de NestJS sobre el esquema ya migrado en producción (columna `ejercicios.activo`, tabla `rutina_grupos`). Se agregaron `POST/PATCH /ejercicios`, filtro `?grupos=` en `GET /ejercicios` (con `activo=true` por default), `POST/PATCH /rutinas`, `POST/PATCH/DELETE /rutinas/:id/ejercicios/:id`, y `grupos: string[]` en las respuestas de `GET /rutinas` y `GET /rutinas/:id`.
 **Por qué:** habilitar administración del catálogo y armado completo de rutinas (antes solo lectura).

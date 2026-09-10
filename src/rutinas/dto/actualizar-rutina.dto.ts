@@ -1,4 +1,13 @@
-import { IsBoolean, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+} from 'class-validator';
+import { GRUPOS_MUSCULARES } from '../../ejercicios/dto/crear-ejercicio.dto.js';
 
 export class ActualizarRutinaDto {
   @IsOptional()
@@ -12,4 +21,11 @@ export class ActualizarRutinaDto {
   @IsOptional()
   @IsBoolean()
   activa?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(3)
+  @IsIn(GRUPOS_MUSCULARES, { each: true })
+  grupos?: string[];
 }
