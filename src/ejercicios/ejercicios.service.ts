@@ -1,8 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 import { Ejercicio } from './entities/ejercicio.entity.js';
 import { Serie } from '../sesiones/entities/serie.entity.js';
+import { CrearEjercicioDto } from './dto/crear-ejercicio.dto.js';
+import { ActualizarEjercicioDto } from './dto/actualizar-ejercicio.dto.js';
 
 const INCREMENTO_KG = 2.5;
 const RPE_UMBRAL_PROGRESION = 7;
@@ -16,8 +22,59 @@ export class EjerciciosService {
     private readonly series: Repository<Serie>,
   ) { }
 
-  listar() {
-    return this.ejercicios.find({ order: { nombre: 'ASC' } });
+  listar(grupos?: string[]) {
+    return this.ejercicios.find({
+      where: {
+        activo: true,
+        ...(grupos?.length ? { grupoMuscular: In(grupos) } : {}),
+      },
+      order: { nombre: 'ASC' },
+    });
+  }
+
+  async crear(dto: CrearEjercicioDto) {
+    const ejercicio = this.ejercicios.create({
+      nombre: dto.nombre,
+      grupoMuscular: dto.grupo_muscular,
+      equipo: dto.equipo ?? null,
+    });
+
+    try {
+      return await this.ejercicios.save(ejercicio);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
+        throw new ConflictException('Ya existe un ejercicio con ese nombre');
+      }
+      throw error;
+    }
+  }
+
+  async actualizar(id: number, dto: ActualizarEjercicioDto) {
+    const ejercicio = await this.ejercicios.findOneBy({ id });
+    if (!ejercicio) {
+      throw new NotFoundException('Ejercicio no encontrado');
+    }
+
+    if (dto.nombre !== undefined) ejercicio.nombre = dto.nombre;
+    if (dto.grupo_muscular !== undefined)
+      ejercicio.grupoMuscular = dto.grupo_muscular;
+    if (dto.equipo !== undefined) ejercicio.equipo = dto.equipo;
+    if (dto.activo !== undefined) ejercicio.activo = dto.activo;
+
+    try {
+      return await this.ejercicios.save(ejercicio);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
+        throw new ConflictException('Ya existe un ejercicio con ese nombre');
+      }
+      throw error;
+    }
   }
 
   async referencia(

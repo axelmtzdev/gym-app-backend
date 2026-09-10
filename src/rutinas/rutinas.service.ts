@@ -1,29 +1,91 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { Rutina } from './entities/rutina.entity.js';
+import { RutinaGrupo } from './entities/rutina-grupo.entity.js';
+import { RutinaEjercicio } from './entities/rutina-ejercicio.entity.js';
 import { Sesion, EstadoSesion } from '../sesiones/entities/sesion.entity.js';
+import { CrearRutinaDto } from './dto/crear-rutina.dto.js';
+import { ActualizarRutinaDto } from './dto/actualizar-rutina.dto.js';
+import { CrearRutinaEjercicioDto } from './dto/crear-rutina-ejercicio.dto.js';
+import { ActualizarRutinaEjercicioDto } from './dto/actualizar-rutina-ejercicio.dto.js';
 
 @Injectable()
 export class RutinasService {
   constructor(
     @InjectRepository(Rutina)
     private readonly rutinas: Repository<Rutina>,
+    @InjectRepository(RutinaEjercicio)
+    private readonly rutinaEjercicios: Repository<RutinaEjercicio>,
     @InjectRepository(Sesion)
     private readonly sesiones: Repository<Sesion>,
+    private readonly dataSource: DataSource,
   ) { }
 
-  listar(usuarioId: string) {
-    return this.rutinas.find({
+  async listar(usuarioId: string) {
+    const rutinas = await this.rutinas.find({
       where: { usuario: { id: usuarioId } },
+      relations: { grupos: true },
       order: { nombre: 'ASC' },
     });
+
+    return rutinas.map((rutina) => ({
+      id: rutina.id,
+      nombre: rutina.nombre,
+      descripcion: rutina.descripcion,
+      activa: rutina.activa,
+      creado_en: rutina.creadoEn,
+      grupos: rutina.grupos.map((g) => g.grupoMuscular),
+    }));
+  }
+
+  async crear(dto: CrearRutinaDto, usuarioId: string) {
+    return this.dataSource.transaction(async (manager) => {
+      const rutina = await manager.save(
+        manager.create(Rutina, {
+          usuario: { id: usuarioId } as any,
+          nombre: dto.nombre,
+          descripcion: dto.descripcion ?? null,
+        }),
+      );
+
+      await manager.save(
+        dto.grupos.map((grupoMuscular) =>
+          manager.create(RutinaGrupo, {
+            rutinaId: rutina.id,
+            grupoMuscular,
+          }),
+        ),
+      );
+
+      return {
+        id: rutina.id,
+        nombre: rutina.nombre,
+        descripcion: rutina.descripcion,
+        activa: rutina.activa,
+        grupos: dto.grupos,
+      };
+    });
+  }
+
+  async actualizar(id: string, dto: ActualizarRutinaDto, usuarioId: string) {
+    const rutina = await this.obtenerPropia(id, usuarioId);
+
+    if (dto.nombre !== undefined) rutina.nombre = dto.nombre;
+    if (dto.descripcion !== undefined) rutina.descripcion = dto.descripcion;
+    if (dto.activa !== undefined) rutina.activa = dto.activa;
+
+    return this.rutinas.save(rutina);
   }
 
   async obtener(id: string, usuarioId: string) {
     const rutina = await this.rutinas.findOne({
       where: { id, usuario: { id: usuarioId } },
-      relations: { ejercicios: { ejercicio: true } },
+      relations: { ejercicios: { ejercicio: true }, grupos: true },
     });
 
     if (!rutina) {
@@ -50,6 +112,7 @@ export class RutinasService {
       nombre: rutina.nombre,
       descripcion: rutina.descripcion,
       entrenamientos_esta_semana: entrenamientosEstaSemana,
+      grupos: rutina.grupos.map((g) => g.grupoMuscular),
       ejercicios: ejerciciosOrdenados.map((re) => ({
         ejercicio_id: re.ejercicio.id,
         nombre: re.ejercicio.nombre,
@@ -58,5 +121,86 @@ export class RutinasService {
         reps_objetivo: re.repsObjetivo,
       })),
     };
+  }
+
+  async agregarEjercicio(
+    rutinaId: string,
+    dto: CrearRutinaEjercicioDto,
+    usuarioId: string,
+  ) {
+    await this.obtenerPropia(rutinaId, usuarioId);
+
+    const rutinaEjercicio = this.rutinaEjercicios.create({
+      rutina: { id: rutinaId } as any,
+      ejercicio: { id: dto.ejercicio_id } as any,
+      orden: dto.orden,
+      seriesObjetivo: dto.series_objetivo,
+      repsObjetivo: dto.reps_objetivo,
+    });
+
+    try {
+      return await this.rutinaEjercicios.save(rutinaEjercicio);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
+        throw new ConflictException(
+          'Ese ejercicio ya está en la rutina',
+        );
+      }
+      throw error;
+    }
+  }
+
+  async actualizarEjercicio(
+    rutinaId: string,
+    rutinaEjercicioId: number,
+    dto: ActualizarRutinaEjercicioDto,
+    usuarioId: string,
+  ) {
+    await this.obtenerPropia(rutinaId, usuarioId);
+
+    const rutinaEjercicio = await this.rutinaEjercicios.findOne({
+      where: { id: rutinaEjercicioId, rutina: { id: rutinaId } },
+    });
+    if (!rutinaEjercicio) {
+      throw new NotFoundException('Ejercicio de la rutina no encontrado');
+    }
+
+    if (dto.orden !== undefined) rutinaEjercicio.orden = dto.orden;
+    if (dto.series_objetivo !== undefined)
+      rutinaEjercicio.seriesObjetivo = dto.series_objetivo;
+    if (dto.reps_objetivo !== undefined)
+      rutinaEjercicio.repsObjetivo = dto.reps_objetivo;
+
+    return this.rutinaEjercicios.save(rutinaEjercicio);
+  }
+
+  async eliminarEjercicio(
+    rutinaId: string,
+    rutinaEjercicioId: number,
+    usuarioId: string,
+  ) {
+    await this.obtenerPropia(rutinaId, usuarioId);
+
+    const rutinaEjercicio = await this.rutinaEjercicios.findOne({
+      where: { id: rutinaEjercicioId, rutina: { id: rutinaId } },
+    });
+    if (!rutinaEjercicio) {
+      throw new NotFoundException('Ejercicio de la rutina no encontrado');
+    }
+
+    await this.rutinaEjercicios.remove(rutinaEjercicio);
+  }
+
+  private async obtenerPropia(id: string, usuarioId: string) {
+    const rutina = await this.rutinas.findOne({
+      where: { id, usuario: { id: usuarioId } },
+    });
+    if (!rutina) {
+      throw new NotFoundException('Rutina no encontrada');
+    }
+    return rutina;
   }
 }

@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Usuario } from '../../usuarios/entities/usuario.entity.js';
 import { RutinaEjercicio } from './rutina-ejercicio.entity.js';
+import { RutinaGrupo } from './rutina-grupo.entity.js';
 import { Sesion } from '../../sesiones/entities/sesion.entity.js';
 
 @Entity({ name: 'rutinas' })
@@ -37,6 +38,9 @@ export class Rutina {
 
   @OneToMany(() => RutinaEjercicio, (re) => re.rutina)
   ejercicios: Relation<RutinaEjercicio>[];
+
+  @OneToMany(() => RutinaGrupo, (g) => g.rutina)
+  grupos: Relation<RutinaGrupo>[];
 
   @OneToMany(() => Sesion, (sesion) => sesion.rutina)
   sesiones: Relation<Sesion>[];

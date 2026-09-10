@@ -34,11 +34,18 @@ Backend de una app de gimnasio/entrenamiento construido con **NestJS** (v12) sob
 | POST | `/auth/login` | No | Login, devuelve tokens |
 | POST | `/auth/refresh` | No | Renueva access token con refresh token |
 | POST | `/auth/logout` | JWT | Revoca refresh token |
-| GET | `/ejercicios` | JWT | Lista catálogo de ejercicios |
+| GET | `/ejercicios` | JWT | Lista catálogo de ejercicios (`activo=true` por default; filtro opcional `?grupos=Pecho,Hombro`) |
+| POST | `/ejercicios` | JWT | Crea un ejercicio en el catálogo |
+| PATCH | `/ejercicios/:id` | JWT | Actualiza (o desactiva con `activo:false`) un ejercicio |
 | GET | `/ejercicios/:id/referencia` | JWT | Última ejecución del ejercicio (excluye sesión opcional vía query `excluir_sesion`) |
 | GET | `/ejercicios/:id/historial` | JWT | Historial del ejercicio para el usuario |
-| GET | `/rutinas` | JWT | Lista rutinas del usuario |
-| GET | `/rutinas/:id` | JWT | Detalle de una rutina |
+| GET | `/rutinas` | JWT | Lista rutinas del usuario (incluye `grupos: string[]`) |
+| POST | `/rutinas` | JWT | Crea una rutina con sus grupos musculares (transacción) |
+| GET | `/rutinas/:id` | JWT | Detalle de una rutina (incluye `grupos: string[]`) |
+| PATCH | `/rutinas/:id` | JWT | Actualiza nombre/descripción/`activa` de una rutina |
+| POST | `/rutinas/:id/ejercicios` | JWT | Agrega un ejercicio al plan de la rutina |
+| PATCH | `/rutinas/:id/ejercicios/:id` | JWT | Actualiza orden/series/reps objetivo de un ejercicio de la rutina |
+| DELETE | `/rutinas/:id/ejercicios/:id` | JWT | Quita un ejercicio del plan de la rutina |
 | POST | `/sesiones` | JWT | Crea una sesión de entrenamiento |
 | PATCH | `/sesiones/:id` | JWT | Actualiza una sesión (p.ej. finalizarla) |
 | GET | `/sesiones/:id/resumen` | JWT | Resumen de una sesión |
@@ -46,6 +53,12 @@ Backend de una app de gimnasio/entrenamiento construido con **NestJS** (v12) sob
 | GET | `/dashboard` | JWT | Resumen agregado para el usuario autenticado |
 
 ## Historial de commits
+
+### Catálogo de ejercicios y gestión de rutinas (2026-09-10)
+**Qué cambió:** capa de NestJS sobre el esquema ya migrado en producción (columna `ejercicios.activo`, tabla `rutina_grupos`). Se agregaron `POST/PATCH /ejercicios`, filtro `?grupos=` en `GET /ejercicios` (con `activo=true` por default), `POST/PATCH /rutinas`, `POST/PATCH/DELETE /rutinas/:id/ejercicios/:id`, y `grupos: string[]` en las respuestas de `GET /rutinas` y `GET /rutinas/:id`.
+**Por qué:** habilitar administración del catálogo y armado completo de rutinas (antes solo lectura).
+**Decisiones clave:** crear una rutina es transaccional (`DataSource.transaction()`, inserta `rutinas` + `rutina_grupos` juntos); la validación de 1-3 grupos vive solo en `CrearRutinaDto`, no hay `CHECK` para eso en la base; conflictos de `UNIQUE` (`23505`) se capturan igual que en `AuthService.registro`/`SesionesService.registrarSerie`; todas las rutas de rutinas verifican dueño vía `usuario_id` del JWT, `ejercicios` sigue siendo catálogo global sin ese chequeo; quitar un ejercicio de una rutina es `DELETE` real (no afecta `series`), desactivar ejercicio/rutina es siempre `activo`/`activa=false`.
+**Archivos:** `ejercicios/entities/ejercicio.entity.ts` (columna `activo`), `rutinas/entities/rutina.entity.ts` (relación `grupos`), `rutinas/entities/rutina-grupo.entity.ts` (nueva), DTOs nuevos en `ejercicios/dto/` y `rutinas/dto/`, `ejercicios.service.ts`/`.controller.ts`, `rutinas.service.ts`/`.controller.ts`/`.module.ts`.
 
 ### `82d747f` — Backend inicial (2026-09-09)
 Commit fundacional: estructura completa de NestJS con los 5 módulos (auth, ejercicios, rutinas, sesiones, dashboard), entidades TypeORM para las 7 tablas, DTOs con class-validator, configuración de proyecto (oxlint, prettier, vitest, tsconfig), y README por defecto de NestJS.
@@ -100,8 +113,9 @@ Capturado desde producción el 2026-09-09. 7 tablas en total.
 |---|---|---|
 | id | integer | NO |
 | nombre | varchar | NO |
-| grupo_muscular | varchar | NO |
+| grupo_muscular | varchar | NO (`CHECK`: Pecho, Espalda, Hombro, Pierna, Brazo, Core, Otro) |
 | equipo | varchar | YES |
+| activo | boolean | NO (default `true`) |
 | creado_en | timestamptz | NO |
 
 ### `rutinas`
@@ -113,6 +127,12 @@ Capturado desde producción el 2026-09-09. 7 tablas en total.
 | descripcion | varchar | YES |
 | activa | boolean | NO |
 | creado_en | timestamptz | NO |
+
+### `rutina_grupos`
+| Columna | Tipo | Nullable |
+|---|---|---|
+| rutina_id | uuid | NO (PK compuesta, FK a `rutinas`, `ON DELETE CASCADE`) |
+| grupo_muscular | varchar(20) | NO (PK compuesta, mismo `CHECK` de lista fija) |
 
 ### `rutina_ejercicios`
 | Columna | Tipo | Nullable |

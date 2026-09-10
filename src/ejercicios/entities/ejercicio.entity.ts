@@ -23,6 +23,9 @@ export class Ejercicio {
   @Column({ type: 'varchar', length: 50, nullable: true })
   equipo: string | null;
 
+  @Column({ type: 'boolean', default: true })
+  activo: boolean;
+
   @CreateDateColumn({ name: 'creado_en', type: 'timestamptz' })
   creadoEn: Date;
 
