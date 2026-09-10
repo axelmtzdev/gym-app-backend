@@ -133,7 +133,7 @@ Todos los campos son opcionales.
 ---
 
 ### `GET /rutinas`
-Lista las rutinas del usuario autenticado. Cada rutina incluye ahora `grupos: string[]`.
+Lista las rutinas del usuario autenticado. Cada rutina incluye ahora `grupos: string[]` y `total_ejercicios: number`.
 
 **Respuesta `200`**
 ```json
@@ -144,10 +144,12 @@ Lista las rutinas del usuario autenticado. Cada rutina incluye ahora `grupos: st
     "descripcion": "Pecho, hombro y tríceps",
     "activa": true,
     "creado_en": "...",
-    "grupos": ["Pecho", "Hombro", "Brazo"]
+    "grupos": ["Pecho", "Hombro", "Brazo"],
+    "total_ejercicios": 5
   }
 ]
 ```
+`total_ejercicios` cuenta los renglones de `rutina_ejercicios` de esa rutina; una rutina sin ejercicios agregados devuelve `0`, nunca `null`.
 
 ---
 

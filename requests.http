@@ -96,7 +96,7 @@ Content-Type: application/json
   "grupos": ["Pecho", "Hombro", "Brazo", "Core"]
 }
 
-### 7. Listar rutinas -> cada una debe incluir "grupos": [...]
+### 7. Listar rutinas -> cada una debe incluir "grupos": [...] y "total_ejercicios" (0 si no tiene ninguno)
 GET {{baseUrl}}/rutinas
 Authorization: Bearer {{token}}
 

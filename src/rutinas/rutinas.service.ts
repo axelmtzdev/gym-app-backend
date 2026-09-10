@@ -33,6 +33,22 @@ export class RutinasService {
       order: { nombre: 'ASC' },
     });
 
+    if (rutinas.length === 0) {
+      return [];
+    }
+
+    const conteos = await this.rutinaEjercicios
+      .createQueryBuilder('re')
+      .select('re.rutina_id', 'rutinaId')
+      .addSelect('COUNT(*)', 'total')
+      .where('re.rutina_id IN (:...ids)', { ids: rutinas.map((r) => r.id) })
+      .groupBy('re.rutina_id')
+      .getRawMany<{ rutinaId: string; total: string }>();
+
+    const totalPorRutina = new Map(
+      conteos.map((c) => [c.rutinaId, parseInt(c.total, 10)]),
+    );
+
     return rutinas.map((rutina) => ({
       id: rutina.id,
       nombre: rutina.nombre,
@@ -40,6 +56,7 @@ export class RutinasService {
       activa: rutina.activa,
       creado_en: rutina.creadoEn,
       grupos: rutina.grupos.map((g) => g.grupoMuscular),
+      total_ejercicios: totalPorRutina.get(rutina.id) ?? 0,
     }));
   }
 

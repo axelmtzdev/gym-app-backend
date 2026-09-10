@@ -54,6 +54,12 @@ Backend de una app de gimnasio/entrenamiento construido con **NestJS** (v12) sob
 
 ## Historial de commits
 
+### Conteo de ejercicios en `GET /rutinas` (2026-09-10)
+**Qué cambió:** cada rutina en `GET /rutinas` gana `total_ejercicios: number` (0 si no tiene ninguno agregado).
+**Por qué:** la pantalla "Elegir rutina" del frontend muestra ese conteo por tarjeta y no había forma de sacarlo de esa respuesta sin pedir el detalle de cada rutina.
+**Cómo se calculó:** `listar()` ya resuelve `grupos` con una relación de TypeORM aparte del `find()` de rutinas, así que el conteo sigue el mismo patrón — una sola consulta agrupada por `rutina_id` contra todas las rutinas del usuario (`GROUP BY` + `COUNT(*)` sobre `rutina_ejercicios`), no un segundo `LEFT JOIN` uno-a-muchos en la misma query de grupos (eso multiplicaría filas por el cruce grupos×ejercicios) ni una consulta por rutina en un loop.
+**Archivos:** `rutinas/rutinas.service.ts`.
+
 ### Fix: exponer `id` de `rutina_ejercicios` en `GET /rutinas/:id` (2026-09-10)
 **Problema:** al implementar el consumo de `PATCH/DELETE /rutinas/:id/ejercicios/:id` en el front, se detectó que `GET /rutinas/:id` nunca devolvía el `id` propio del renglón de `rutina_ejercicios` en cada objeto de `ejercicios[]` (solo `ejercicio_id`, que es el id del catálogo) — sin ese dato no había forma de armar la URL de esas dos rutas para editar/quitar un ejercicio ya guardado en una rutina.
 **Fix:** agregar `id: re.id` al mapeo de `ejercicios[]` en `RutinasService.obtener()`.
